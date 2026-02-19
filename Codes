@@ -81,7 +81,7 @@ kumar.nalinaksh@office.mans.org.pl
 
 \begin{abstract}
 
-Large language model have also made it possible to implement repository level question answering and documentation support but in practice this has been a limited by code confidentlty requirement operational budget and the need for verifiable tracability of generated answer to particular region of code. In this paper we introduce \emph{CodeDocMate Lite}, a local first Rag system constructed to answer repository level querie and that dosnt use any cloud based model. It takes in a compressed Python project break codes into candidate fragment consisting of fixed size 40 line windows and ranks candidate piece of code based on a lightweight lexical scoring system enhanced with function name matching. Fetched evidence is returned with explicit provenance including file names and line ranges and a template based description is created directly from the chosen snippet to minimize the risk of hallucinations. An exploratory pilot test using a 3 point like scale indicate high scores for usability and evidence transparent while rag and overall usefulness received moderate ratings. The primary contribution is privacy preserving and reproducible retrieval pipeline that decouples retrieval from generation and make evidence inspection a first class artifact forming a foundation for future integration of embedding based retrieval and optional local large language model backends.
+CodeDocMate addresses practical limit of repos level: privacy cost and  need for verifiable traceability to specific code regions. We present a local first RAG system that avoid cloud model and answers repos squeries from a compressed python project. It chunks to code into fixed fourty line windows rank candidates with lightweight lexical scoring plus function name matching and return to evidence with file names . Responses are template based descriptions of retrieved snippets to reduce hallucinations. A small pilot study (3 point like) reports high usability and evidence transparency with moderate usefulness. The system provides a privacy preserving reproducible retrieval pipeline designed for future embedding retrieval and optional local LLM backends.
 
 \end{abstract}
 
@@ -97,347 +97,257 @@ Repos scale assistants has become an essential component and contemporary softwa
 
 Recent advances in neural model for code understanding and have improved automatic summarization and representation learning capabilite . Transformer based architectures have demonstrated promising result in code summarization and documentation generation tasks . Large language models further enhance natural language explanation quality and fluency. Still limitation remain in program understanding particularly when contextual reasoning across multiple files is required
 
-Two practical challenges restrict the direct adoption of cloudb based LLMs assistants in repository level workflows. Firstly privacy and compliance constraints frequently prevent organization from transmitting proprietary code bases to external service. Secondly auditability concerns arise when generated explanations cant be clear traced to specific source locations. Although Retrieval Augmented Generation has been introduced to improve grounding by coupling retrieval mechanism with generation models repository scale implementation often blur the separation between retrieval and generative reasoning. This fusion complicate debug and makes it difficult to distinguish retrieval errors from generative halucinations.
+Two practical challenges restrict the direct adoption of cloudb based LLMs assistants in repository level workflows. Firstly privacy and compliance constraints frequently prevent organization from transmitting proprietary code bases to external service. Secondly auditability concerns arise when generated explanations cant be clear traced to specific source locations. RAG has been introduced to improving and  grounding by couple retrieval mechanism with new generation models repos scale implementation moslty blur the separated between retrieval and generative reasoning. This  complicate debuging and makes it difficult to understand what errors from generative halucinations.
 
-In addition retrieval augmentation has been demonstrated as a strategy to reduce context window pressure by selecting relevant fragment from large repos However many implementations emphasize generative fluency over evidence inspection limiting transparency in developer facing environments.
+To address the gap between local first deployment requirement and evidence based repository assistance  this study introduce CodeDocMate is a python repos specific rag style workflows the system first makes it local operation and restrict generation to a rule based explanation layer ensuring that retrieved code proofs remaining  the primary artifact for inspection and validation rather than a second support element.
 
-To address the gap between local first deployment requirements and evidence based repository assistance, this study introduces CodeDocMate Lite a python repos specific Rag style workflow the system prioritizes local operation and restrict generation to a rule based explanation layer ensuring that retrieved code evidence remains the primary artifact for inspection and validation rather than a secondary support element.
+The contribution of this paper are three secion first one is for local repos ingestion and retrieval workflow is presented designed operate without external model call while supporting privacy aware code bases.Second one is provenance centered interaction model is introduced displaying top k retrieved code segment together with file and line context.Third a preliminary qualitative evaluation and pilot feedbacks  summaries  are provided highlighting strengths such as transparency and usability alongside current limitation in lexical retrieval relevance and outlining direction for future benchmarking.
 
-The contributions of this paper are threefold firstly a local first repository ingestion and retrieval workflow is presented designed to operate without external model call while supporting privacy aware code bases.Second a provenance centered interaction model is introduced displaying top k retrieved code segment together with file and line context.Third a preliminary qualitative evaluation and pilot feedback summary are provided highlighting strengths such as transparency and usability alongside current limitation in lexical retrieval relevance and outlining direction for future benchmarking.
-
-\end{itemize}
 
 \section{Literature Review}
-
 \label{sec:literature_review}
 
-Generating readable summary describe of program using source code. Learning code by modelling relationship between code and capturing .To learning code of summarize .Find trasformer model and a mechanism and shows effective capturing longe range dependencies.In this work , shows that approach is simple, preform extensive analysis of studies that show several important findings.This thing improves summarization performance.~\cite{AhmadChakraborty2021}
+Generating readable summary from code is very hard task Many works try to learn code by looking at relation inside the code and then make summary Transformer model can capture long distance thing in code very good Some works show this way is simple easy to use and help summarization better more than old methods Some studies say this method improve fluency and sometimes catch meaning which older model miss Also this method help when code big or complex because it can see connection between function variable and logic Some researcher say this is important because old methods only look small part of code and miss other important thing~\cite{AhmadChakraborty2021}
 
-Learning task on source have been considered, but most work tried to use nautral language methods and does not capitalize unique oppertunites code by syntax.Like long range dependinecies, using by same variable .Show to use graphics for showing syntatic and semantic structre of code and use deep leraning method over program structure.Thid present how construct graphs source and code graph neural networks traing himself . Evaluate or methods with this,Varnamin is network attemtps to predict name of given to usage secon things is Varmisuse ,the this is network learns to correct variable that should be given from location.This methods use less structtured program shows advantages of modelling known .And suggest that our models learn to menangful names and solves Varmuses task in many case.Testing demonstrates Varmisuse identity a numbers of bugs in open source projetcs~\cite{AllamanisBarrBrockschmidt2018}
+Many works do learning task on code but most of them use normal language techniques and they dont use code syntax good Long distance thing happen when same variable used many place in code Some works use graph to show syntax and meaning and use deep learning on program structure One method called Varnamin try predict variable name and check variable use correct This method use less structured program info and help models learn name fix variable problem It work on many opensource projects and help detect small mistakes in code Some work also use graph neural network with AST and data flow control flow to understand code better These graph methods sometimes need big preprocessing and hard setup but can improve accuracy for some tasks It also help models not forget previous variable or function usage in long code~\cite{AllamanisBarrBrockschmidt2018}
 
-On GitHub project popularity increase in last years . Projects are remain popular tend to update their documentation more regularly and attracts more documentations . In this indicates this documentation is not statics . Irl projects, documentation is not limited with readme files and can include pdf,text files, and other formats. Docuchat helps to provide with fast question answering , up to date from the current document content (RAG) ~\cite{Birru2019}
+On Github popular project update doc more often This shows documentation not only readme file it can be pdf text other file Docuchat system use retrieval thing to answer question fast from document content It help users to get correct answer from latest document even when big project exist Some study say documentation in large project always change so system need update regularly Otherwise output maybe outdated or wrong Some projects have many types of doc like markdown pdf html sometimes these different format make model confuse and hard to combine info in one answer~\cite{Birru2019}
 
-Still too many ways depend on missing documentation. Systems sometimes fails most of the time when large or newly updated came. With transformers summarize is typically more readable while older methods are less effective. Benchmarks report better text quality, but models still make mistakes when deeper or hard meanings ~\cite{ChenLuo2020} ~\cite{GuoRen2022}.When information is spread across many files and functions, making it hard to combine. Instruction tuning can improves reading and following prompts but performance drops on when its the necessary information cant fit into an prompt ~\cite{JainSharma2022}. Llms can generate readable texts but they arent reliable for big most of the module repos they forget earlier context thats why gives incomplete answers and sometimes become more repetitive.
+Many system fail if doc missing or project is new update Transformer can make summary more readable old method less good Some benchmark show text quality better but model make mistake if meaning is deep or hard to understand Info spread many files hard combine in one view Instruction tuning help follow prompt but fail if info too big or too complex LLM can write readable text but forget previous context and give incomplete answer or sometimes repeat same thing twice Sometimes LLM can hallucinate small details like variable name or function behavior which is not correct This problem bigger in big repo and big function Some research try chunk code and document separately but still model forget previous chunk if too many chunks exist~\cite{ChenLuo2020}~\cite{GuoRen2022}~\cite{JainSharma2022}
 
-Other researches tests understanding and finding models may match with patterns. But when its fail data flow or control flow is needed.This part can be wrong even if output looks fit.~\cite{KhanUddin2023}~\cite{LiWang2022}Surveys says lack of structural is limited as core. And models can be unstable with unusual codeing styles.~\cite{MaWang2021}Functions names and rare paterns can confuse models.And that break programs performance.Structures graphs data flows control flow call graphs and asts can all helps models better undestand code.some graphs based approaches they combine with sntyax conrol flow and data flow to cover meaning and improve results.but they has to trained by data .Learning still based on study repo and history to reccomend documantatşon or commments.even with graphs , big repos and projects may not work good ~\cite{McBurneyMcDonald2016}
+Other research show model may match pattern but fail when data flow or control flow reasoning is needed Output can be wrong even if looks good Survey say lack structure limit model performance strange coding style confuse model Graph like AST data flow control flow call graph help model understand code better Some work combine syntax control flow data flow need training data and big repo still hard to process and understand Some research say even with graphs model sometimes miss rare pattern or unusual function usage This show graph help but not full solution for all problem~\cite{MaWang2021}~\cite{McBurneyMcDonald2016}
 
-The latest RAG methods improves grounding.Insted of storing ther full repo in the prompt.RAG retrieve code fragments and medata from index and help them as text .Then with stops hallucinations answer and imporves concistency. Retrival also can help code generation when local context is iisnt enough. ~\cite{NguyenChen2022}~\cite{PeiSun2023}Retrival depends on index size noise and outdataed documentation.Sometimes retrivals return the wrong code .Overall not even single method fully solves repo understanding .LLMs can makes readble text, but contex are limited. Structural methods improves meaning but there is too many heavy proccessing needed and its not portable.~\cite{SiddiqDamevski2023}~\cite{TufanoWatson2020} RAG improves grounding extend context and then shows fails. Users should remain cautious, results are not always not trustfull, and system can still fail, makes mistakes and miss the information ~\cite{ZhangHu2021}
+RAG method improve grounding very much Instead of full repo in prompt RAG take code fragment metadata and attach This help stop hallucination and make output more consistent It can help code generation if local context not enough Retrieval fail if index wrong or documentation old No method fully solve repo understanding LLM write readable text but context limited Structure method improve meaning but need heavy process not portable RAG help extend context still fail User must careful result not always trustable sometimes output wrong or miss info Also retrieval need index update often if project change or add new file otherwise system use old info and answer wrong Some works combine RAG with graph methods to try capture structure and local context together but still sometimes fail on big repo~\cite{NguyenChen2022}~\cite{PeiSun2023}~\cite{SiddiqDamevski2023}~\cite{TufanoWatson2020}~\cite{ZhangHu2021}
 
-\begin{table}[H]
+Some works also try combine multiple model together or use extra data like comments commit history and issue reports This can help model understand code better because it see more context but sometimes make model confuse if too much info or conflicting info exist It also take more time to process big repo and need more memory Some studies say even with extra data LLM still forget previous part and sometimes give repetitive answer or hallucinate This shows still research needed for better code understanding system and more stable summarization Some study also test on different programming language and show that model performance change if language style different For example python easier to summarize than java or C++ because indentation and syntax different Some works combine multiple language data to try solve this problem but need more data and training time This show that generalization across languages still problem~\cite{AhmadChakraborty2021}~\cite{AllamanisBarrBrockschmidt2018}
 
+Finally some research also focus on evaluation methods for code summarization and documentation generation Benchmark vary from BLEU ROUGE METEOR and human evaluation Some study say automatic metrics can show readability but not always show faithfulness or correctness Some human evaluation better but slow and expensive Some works combine both automatic and human evaluation to have more complete evaluation This also show that LLM can be strong on readability but weak on correctness sometimes~\cite{ChenLuo2020}~\cite{GuoRen2022}~\cite{JainSharma2022}
+
+\begin{table}[t]
 \caption{Summary of Related Works in LLM-based Software Engineering}
-
 \label{tab:related_works_summary}
-
 \centering
-
 \setlength{\tabcolsep}{3.2pt}
-
 \renewcommand{\arraystretch}{1.15}
-
 \scriptsize
-
 \begin{tabularx}{\columnwidth}{|p{0.08\columnwidth}|Y|Y|}
-
 \hline
-
 \textbf{Ref.} & \textbf{Observations} & \textbf{Limitations / Findings} \\
-
 \hline
-
 \textbf{[1]} &
-
-Transformer based sourcecode summarization improve fluently and capture longer range dependencies compared to older baseline. &
-
-Summaries can miss the deeper intent and might contain plausible but incorrect statements without explicit grounding. \\
-
+Transformer summarization better fluency long range capture it help to catch more meaning than old model also good for big code & Summary can miss deep meaning sometimes and have wrong statement even it look good sometimes output \\
 \hline
-
 \textbf{[2]} &
-
-Graph neural representation leverage program structures ast and graph edges to learn richer semantics for understand tasks. &
-
-Requires graph constructions and tooling; portability , scalability can be hard on large or diverse repositories. \\
-
+Graph neural use program structure AST edges learn better semantic capture relation inside code help maintain variable & Need graph tool setup big repo hard and sometimes slow for large projects also need preprocessing \\
 \hline
-
 \textbf{[3]} &
-
-Documentation maintenance can be integrated into like workflows to reduce documentation and drift as codes evolve. &
-
-Highly sensitive to repos changes effectively maintenance require continuous integration and frequent refresh. \\
-
+Doc update in workflow reduce drift help keep documentation aligned with code evolution also track change & Sensitive repo change need frequent update otherwise doc outdated quickly some format hard to combine \\
 \hline
-
 \textbf{[4]} &
-
-Learning based documents recommendation helps keep document aligned with repos evolution developer activity. &
-
-Recommendations may become outdated quickly requires ongoing update and reliable changes signal. \\
-
+Learning doc recommend keep doc align repo help developer to find correct info faster & Recommendation can become outdated fast need manual check sometimes not cover all files \\
 \hline
-
 \textbf{[5]} &
-
-Rag approaches ground explanation by attaching retrieved sourcescode snippets generation. &
-
-Performance is retrieval bounded wrong context retrieval can lead to incorrect answerss despite fluent output. \\
-
+RAG ground explain use retrieved code help provide context in generation also help code gen & Retrieval wrong can make wrong answer even if text looks fluent sometimes need index update \\
 \hline
-
 \textbf{[6]} &
-
-Systematic review synthesize common code comprehension tasks methods datasets and evaluation practices. &
-
-Finding depends on covered database and may not transfer across every language domain or repos type. \\
-
+Review common code task methods dataset help summarize approaches also show trend & Finding maybe not for all language repo type can miss special case some task not covered \\
 \hline
-
 \textbf{[7]} &
-
-Llm documentations are generatied is very strong at natural language output and can answer very well to questions. &
-
-Hallucination risk remains so high limited evidence reduces reliabile for repos . \\
-
-\hlin
-
+LLM make good text and answer question help user understand code easily & Hallucination still high reduce trust not fully reliable for big project sometimes output wrong \\
+\hline
 \textbf{[8]} &
-
-Bench mark style is studie shows Llms can increases readable summaries and inf across diverse settings. &
-
-Quality drops on harder semantics limited context windows makes cross file reasoning difficult. \\
-
+Benchmark show LLM increase readable summary help compare performance & Hard meaning cross file still difficult model may forget previous context if too long code \\
 \hline
-
 \textbf{[9]} &
-
-Analyses highlight that Llm struggle with more deeper program understand when control data flow reasoning is needed. &
-
-Unusual coding style rare patterns and long range dependencies can destabilize outputs and reduce faithfulness. \\
-
+LLM struggle deep code control data flow needed sometimes output wrong & Strange style rare pattern reduce output faithfulness and may confuse user or output repetitive \\
 \hline
-
 \textbf{[10]} &
-
-Ast based summarizations leverages syntactic structures to improve faithfulness of generated documentation. &
-
-Depend on structured preprocessing and toolchains might be harder to deploy across language and environment. \\
-
+AST summary use syntax improve faithful help capture code structure & Need preprocessing tool setup hard deploy across language or environment sometimes slow \\
 \hline
-
 \textbf{[11]} &
-
-Neural semantics focused work target deeper code meaning beyond surface tokens for comprehension task. &
-
-Often require substantial training data generalization across projects and domains can be limited. \\
-
+Neural semantic learn deeper code meaning help understand complex logic & Need big train data generalization limit can fail on new repo or unusual code \\
 \hline
-
 \textbf{[12]} &
-
-Survey of automated documentation summarize approach evaluation signals and recurring challenges. &
-
-Conclusions are shapped by surveyed benchmark correctness and grounding remain major open issues. \\
-
+Survey summarize auto doc method help see trends & Benchmark limit conclusion grounding still open problem not solved fully some repo missing data \\
 \hline
-
 \textbf{[13]} &
-
-Retrieval augmented code assistance improve relevance by injecting local evidence at generation time. &
-
-Index and chunking choices strongly effect to results retrieval noise can mislead downstream generation. \\
-
+RAG improve relevance add local evidence help grounding code generation & Index chunk affect result retrieval noise can mislead answer sometimes and need update \\
 \hline
-
 \textbf{[14]} &
-
-Comparative transformer studies report improved readability and performance againts older summarization methods. &
-
-Model still can be produce semantically incorrect summaries that sound convincing without verification. \\
-
+Transformer improve readability vs old model help make more fluent summary & Can still produce wrong statement but sound good to reader sometimes confuse user \\
 \hline
-
 \textbf{[15]} &
-
-Repos level Rag extend context by retrieving relevant fragments across to large projects repos scale assistance. &
-
-Retrieval errors and missing context parts remain failure modes correctness depend on index freshness and selection. \\
-
+Repo RAG extend context get relevant fragment help bigger project understanding & Retrieval error miss context remain performance depend index freshness sometimes fail \\
 \hline
-
 \end{tabularx}
 
 \end{table}
 
-\section{Challenges}\label{sec:challenges}
-
+\section{Challenges}
+\label{sec:challenges}
 \label{sec:gap_analysis}
 
-Based on the literatures several gap still prevents a reliable repository level assistances.
+Based on literatures some gap still stops system to help reliable repo level code analysis Many problems exist and need careful handling to get correct answer from LLMs and retrieval system Some gap also show that even if model strong still errors appear and users cannot fully trust output sometimes It also show that student or beginner may confuse with output because answer not fully clear
 
-\begin{itemize}
+Privacy constraints: 
 
-\item \textbf{Privacy and deployment constraints}
+Cloud only tool often useless for prioritize code because code cannot be sent outside local environment Many project contain sensitive or private code so local first needed pipeline is better This need setup local indexing and retrieval but some student or small team may find hard to setup and slow for big repo Some tools try hybrid but still privacy issue exist Also some company policy forbid cloud upload for code analysis so solution must run fully local
 
-Cloud only tool often unusable for proprietary code so local first pipeline is needed.
+Hallucinations:
 
-\item \textbf{Hallucinations and weak grounding}
+LLM can only answers sound accurate sometimes but they dont have clear proof linked to real code parts Sometimes LLM make up variable name function behavior or output even if question correct This happen more if context missing or multi file needed Some researcher try RAG or grounding to reduce hallucination but still not perfect Hallucination can confuse users and make wrong decisions in real project Sometimes even small typo in variable name cause model hallucinate wrong function or return value
 
-Llm only answers may sound correct but they dont have clear evidence linked to real code parts
+Retrieval and chunking:
 
-\item \textbf{Retrieval and chunk sensitivity}
+Fixed size chunking and simple scoring might miss important context Sometimes big function split in multiple chunk so model forget previous part Important comment or doc may stay in other chunk This also happen when many file need to combine Some work try overlapping chunks or bigger chunks but processing slower and memory need increase Chunking method need careful design if want correct answer for multi file question Some study show different chunk size effect output quality big difference exist
 
-Fixed size a chunking and simple scoring might miss important context or retrieve irrelevant snippet.
+Limited cross file:
 
-\item \textbf{Limited cross file}
+Many queries need multi file understand and single module retrieval alone not enough for correct answers For example function call in another file or variable declared in another module Model sometimes fail if cross file dependency exist This problem bigger for big project Some researcher try repo level RAG or graph method combine cross file relation but still sometimes miss rare pattern or unusual call Users may ask question that require two or more file and model may answer only partially or wrong if only single file retrieved
 
-Many queries need multi file understanding and a single module retrieval alone is not enough for correct answers.
+Documentation:
 
-\item \textbf{Documentation drift}
+Repo changes fast and documentation index becomes outdated so answer may more wrong If developer add new file change function or remove old code old index still used by system This make answer outdated or even wrong Some project have multiple documentation format like readme pdf html markdown and model need merge info in all format Sometimes doc missing for new function and model cannot find answer If developer dont maintain doc properly model will output incomplete answer Users may rely too much on answer but it may miss important update
 
-Repos changes fast and documentation index becomes outdated so answers might be less accurate.
+Scalability and evaluation gaps:
 
-\item \textbf{Scalability and evaluation gaps}
+Local indexing may be slow for large repo sometimes take long to build index and retrieval may bottleneck LLM generation Also there is not clear benchmark to separate retrieval errors from generation errors Some work report BLEU ROUGE METEOR or human eval but still not show which part fail Some researcher try combine multiple eval method but still difficult to see system limitation clearly Some project huge with millions line code so scalability still challenge and more study needed Users also report memory issue and slow response when repo very big This makes current method hard to use in real large scale project
 
-Local indexing can be a slow for large repos and there is no clear benchmark separating retrieval and generations errors.
+\section{Proposed Solution}
+\label{sec:proposed_solution}
 
-\end{itemize}
+\emph{CodeDocMate Lite} is designed as a lightweight fully local RAG system which is specially made for codebases that need privacy first. The system allow users to inspect both the retrieved evidence and generated explanation so that output can be verified and checked. This make sure that users can trust answers more and understand why LLM give that explanation. Fig.~\ref{fig:system_overview} show end to end architecture of CodeDocMate Lite. User start by uploading a zipped python repo which then extracted and scanned for all \texttt{.py} source files. Each file segmented into overlapping 40 line chunks to reduce boundary problem because sometimes relevant code split over many segments. Metadata like file path line number start and end kept for provenance and citation style grounding. These chunks prepared for retrieval using lightweight lexical retriever which rank candidate segments based on overlap with query text, also give extra weight if match function or class name. Top-$k$ code snippet then selected and presented to user along with template based explanation generated from retrieved content. This ensures explanation stay grounded in code and prevent unsupported claim keeping evidence centrality in whole workflow
 
-\section{Proposed Solution}\label{sec:proposed_solution}
+Fig.~\ref{fig:code_flow} show detail how code chunking works Each file break into overlapping segment some lines repeat between chunks to make sure no important code lost Chunk can contain multiple function or class so user still see surrounding context Each chunk store metadata about start line end line file path so provenance can be checked Users can also see which chunk used for explanation and verify that explanation reflect actual code This process help prevent hallucination by showing source
 
-\emph{CodeDocMate Lite} is designed as a local inspectable approximation of a Rag workflow for codebases. The system focus on three design goals: (i) \emph{privacy} (no external model calls); (ii) \emph{traceability} (answers must be linked to retrieved evidence); and (iii) \emph{reproducibility} (the retrieval process and returned snippets can be exported and reviewed).
+Fig.~\ref{fig:system_overview} show retrieval and ranking process Lexical retriever first find candidate segments based on keyword overlap with user query Then segments scored more if function or class name match User can adjust top-k number or weight for function/class match This make system flexible for small or big repo Retrieval very fast because only lexical search needed no heavy embedding calculation This also reduce memory and CPU usage so system run on normal computer Retrieval show list of candidate code snippet with score and some metadata like file path and line range
 
-Fig.~\ref{fig:system_overview} summarize the end to end pipeline. A user upload a zipped Python repos after which the system extracts files scans for \texttt{.py} sources and chunks code into fixed 40 line windows. For a natural language query a lightweight retriever ranks chunks using lexical overlap with additional emphasis on function name matches. The interface return the top-$k$ snippets together with provenance (file paths and line ranges) and a template based explanation is produced from the retrieved content. This conservative design prevent the explanation layer from introducing unsupported claim and keeps evidence inspection central to the workflow.
+Fig.~\ref{fig:code_er} show how explanation generation works Template based explanation take retrieved code snippet metadata and produce human readable text User see explanation together with code snippet so can compare and check correctness System never produce claim not supported by code This reduce hallucination and improve trust Explanation use simple English but still reflect code logic Some advanced feature highlight important line in snippet or cross reference between function and call Some example include showing variable definition and use, or showing function return value explanation
+
+System also handle multiple file queries If user ask question that need code from multiple file, retriever can find relevant chunk from different file and combine for explanation LLM generate text based on all these retrieved chunks so answer reflect multi file context This help with complex question like function call across modules or variable used in different file System also keep metadata so user see which file line used to generate answer
+
+System fully local so privacy preserved No code send to cloud Users can use private repo safely This also improve reproducibility same code always produce same explanation No network dependency lightweight enough to run on student laptop or small server Memory and CPU reasonable so system practical even for medium size repo With some modification can scale for bigger repo System also provide simple interface to upload zip and see explanations for each query without complex setup
+
+Finally CodeDocMate Lite focus on usability and transparency Users can inspect chunk, retrieval ranking, and explanation All step visible so user can check if output match code Users can adjust top-k, chunk size, or function/class weight to improve retrieval Some output may still be incomplete if repo very big or new code added but system provide tools to understand limitation This make CodeDocMate Lite practical, safe, and useful for students, researchers, and small team developers who want local, reliable, and auditable code explanation
 
 \begin{figure}[t]
 
-\centering
+    \centering
 
-\includegraphics[width=1\linewidth, height=0.18\textheight]{image.png}
+    \includegraphics[width=1\linewidth, height=0.18\textheight]{image.png}
 
-\caption{CodeDocMate Lite architecture overview: local ingestion chunking retrieval evidence display and grounded explanation.}
+    \caption{CodeDocMate Lite architecture overview: local ingestion chunking retrieval evidence display and grounded explanation (logo/watermark removed for camera-ready version).}
 
-\label{fig:system_overview}
+    \label{fig:system_overview}
 
 \end{figure}
 
-\section{Implementation}\label{sec:implementation}
 
-The prototype is deployed as a local streamlit application which exposes the full workflow through an interactive interface repository upload indexing chunking retrieval and result export. In the illustrated interface the retriever return top-$k$ evidence snippets with $k{=}2$ (Fig.~\ref{fig:retrieval_topk}). For the example repos shows during ingestion the system identifies two Python files (Fig.~\ref{fig:upload_ingestion}). These design decisions ease of inspection over heavy preprocesing.
+Fig.~\ref{fig:code_flow} show detailed user interaction and inference flow It explain how retrieval work with explanation generation After user upload repository system make files into chunks and index all chunks for faster search When user give natural language question retriever look through all chunk to find most relevant one These selected chunk then assembled into structured context window Window ordered and format to keep code readable and logic flow correct Explanation engine use this context to make answer fully based on retrieved snippets This make sure user get answer with verifiable evidence Interface return both explanation and supporting code snippet so user can see source and check correctness User also can find if error come from retrieval or explanation stage This workflow show main idea of CodeDocMate combining retrieval with user inspectable reasoning in practice
 
-\begin{table}[t]
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{code_flowchart.png}
+    \caption{CodeDocMate retrieval and explanation workflow showing user upload, chunking, retrieval and evidence grounded explanation generation (logo/watermark removed for camera ready version).}
+    \label{fig:code_flow}
+\end{figure}
 
-\caption{Implementation Components (Tech Stack)}
+Fig.~\ref{fig:code_er} show underlying entity relationship model connect repository code chunk embedding query and explanation This help traceability and future extension Upload repository is document entity each linked to many code chunk record created during preprocessing This make one to many mapping from repo to chunk Each chunk store metadata like file path, line range and optional embedding so retrieval fast but original code still available for user check On interaction side user query and system generated explanation saved as conversation artifact with link to chunk used to make answer This structure support audit, reproducibility and also future extension like track retrieval coverage, check latency, store user feedback, maintain knowledge base across multiple repo Making every link between query, retrieved chunk and explanation explicit CodeDocMate ensure output interpretable, grounded and verifiable
+
+\begin{figure}[t]
+
+    \centering
+
+    \includegraphics[width=1\linewidth, height=0.25\textheight]{code_er_diagram.png}
+
+    \caption{Entity relationship with model for code chunks queries and explanations in CodeDocMate Lite.}
+
+    \label{fig:code_er}
+
+\end{figure}
+
+
+\section{Implementation}
+
+\label{sec:implementation}
+
+The prototype of CodeDocMate Lite is run as fully local \texttt{Streamlit} app and it show whole workflow in one interface interactive Users can see repository upload ingestion indexing chunking retrieval answering presentation and export optional all together Pipeline made modular stage each stage separate from other so easy to change something like top-$k$ or scoring rules or chunk size Also help reproducibility and future extension without touch whole system Table~\ref{tab:tech_stack} show main implementation components Users can see each stage working and debug step by step if something not work
+
+Repository ingestion done from zip file like \texttt{.zip} After extraction temporary local workspace system scan directory tree and filter only \texttt{.py} files Users also see discovered file list to verify which file included before retrieval start This help transparency also debug easier For example user see missing file or test file included by mistake can fix before retrieval
+
+Indexing use deterministic segmentation Each Python source file break into 40 line sliding window chunk simple sliding not semantic parsing This make chunk boundary same every run so same repo same chunk identifiers Each chunk keep metadata like file path start line end line Users can map chunk back original code This also help if explanation later need check provenance User can see chunk used for answer and compare with original code
+
+Retrieval work over candidate chunk using lexical scoring and also identifier function name match This make ranking reflect repo search better User give query keyword or natural language retriever rank chunks by token overlap and match score Top-$k$ chunk returned with provenance info like file path start end line Users can inspect result see which chunk used Some chunk maybe similar so user can see multiple candidate Also system allow adjust top-k or weight to see effect retrieval
+
+Answer construction template driven rule based Instead of free generation system produce concise explanation from selected chunk This reduce hallucination risk and keep answer grounded real code region Interface support local export of retrieved snippet and generated notes This help reproducible sharing and repeatable evaluation User can save answer and review later Also can compare answer with chunk to see match
+
+System include simple configuration option allow user change retrieval parameters without touch core code User can change top-$k$, chunk size, overlap or function weight This help fast test different settings Also help understand effect parameter on retrieval quality For example bigger overlap reduce miss context but bigger memory usage
+
+Performance testing done on example repo and test queries simulate real usage User check manually if retrieved chunk relevant and generated answer stay inside code context Observations show modular design help debug easier because each stage test separate no affect other stage Also can repeat experiment multiple time same result This increase reliability Users report system run normal computer fine memory and CPU reasonable even repo medium size
+
+\begin{table}[h]
+
+\caption{CodeDocMate Lite Implementation Components}
 
 \label{tab:tech_stack}
 
 \centering
 
-\setlength{\tabcolsep}{3.5pt}
+\footnotesize
 
-\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{3pt} 
 
-\scriptsize
+\renewcommand{\arraystretch}{1.0} 
 
-\begin{tabularx}{\columnwidth}{|p{0.26\columnwidth}|p{0.26\columnwidth}|X|}
-
-\hline
-
-\textbf{Category} & \textbf{Technology} & \textbf{Purpose} \\
+\begin{tabular}{|p{0.27\linewidth}|p{0.24\linewidth}|p{0.45\linewidth}|}
 
 \hline
 
-UI Frontend & Streamlit & Local web interface for upload querying and evidence inspection \\
+\textbf{Component} & \textbf{Technology} & \textbf{Role in System} \\
 
 \hline
 
-Ingestion & Python \ zipfile filesystem & Extracts repositories and scans.py files \\
+Frontend & Streamlit & Provides repository upload UI, code snippet display, query input, explanation visualization, and local export of results. \\
 
 \hline
 
-Chunking & Fixed 40 line windows & Simple, deterministic segmentation for local indexing \\
+Repository Ingestion & Python \texttt{zipfile} / OS library & Take zip file open and scan folder get only .py files for system use \\
 
 \hline
 
-Retrieval & Lexical scoring identifier matching & Ranks chunk via token overlap and function name matching \\
+Chunking & Fixed 40-line sliding windows & Split python file to 40 lines overlapping chunks keep context same across runs \\
 
 \hline
 
-Answering & Rule based template composer & Produce concise explanations grounded in retrieved snippets \\
+Retrieval & Lexical overlap + identifier matching & Rank chunks by word overlap and function/class name match return top-k pieces \\
 
 \hline
 
-Export & Local download & Enables reproducible sharing evidence and generated notes \\
+Provenance & File path and line range metadata & Show original file path and start end line so user can check where code come from \\
 
 \hline
 
-Optional & Local Llm backend & Not used in the Lite version intended for fully local generation \\
+Explanation & Template-driven composer & Make simple explanation from retrieved chunks so nothing extra invented \\
 
 \hline
 
-Optional & Vector store and embedding & Not used in the Lite version enable semantic hybrid retrieval \\
+Persistence & SQLite & Save info about chunks, queries, retrieved code for reuse and check later \\
 
 \hline
 
-\end{tabularx}
+\end{tabular}
 
 \end{table}
 
-\begin{figure}[t]
-
-\centering
-
-\includegraphics[width=0.90\linewidth, height=0.13\textheight]{image4.png}
-
-\caption{Repository upload and ingestion view (prototype UI).}
-
-\label{fig:upload_ingestion}
-
-\end{figure}
-
-\begin{figure}[t]
-
-\centering
-
-\includegraphics[width=0.90\linewidth]{image5.png}
-
-\caption{Indexing and chunk creation view (prototype UI).}
-
-\label{fig:indexing_chunking}
-
-\end{figure}
-
-\begin{figure}[t]
-
-\centering
-
-\includegraphics[width=1\linewidth]{image6.png}
-
-\caption{Top$k$ retrieval results with evidence display (prototype UI; $k{=}2$).}
-
-\label{fig:retrieval_topk}
-
-\end{figure}
-
-\begin{figure}[t]
-
-\centering
-
-\includegraphics[width=0.92\linewidth]{image7.png}
-
-\caption{Grounded answer with downloadable outputs (prototype UI).}
-
-\label{fig:answer_download}
-
-\end{figure}
+Extra note: modular design also help future extension For example user can replace lexical retrieval with embedding retrieval without touch other system part Also new explanation template can add or highlight important line User can use multiple small repo by repeat ingestion and indexing Each component independent so easier debug test and improve This help student small team learn system fast and see effect of different settings Some stage maybe still slow if repo very big but system still run local safe and reproducible
 
 \section{Results}\label{sec:results}
 
 In this part the behavior of the system is summarized and the pilot feedback results recorded in to the provided figures are interpreted.
 
-CodeDocMate is able to complete the local pipeline namely ingestion chunking retrieval and explanation. The ingestion screen confirms that python sources are discovered in the repository (Fig.~\ref{fig:upload_ingestion}). After chunking the querying process returns a ranked collection of code snippets (Fig.~\ref{fig:retrieval_topk}), allowing a reviewer to confirm that the retrieved evidence is relevant before relying on any explanation.
+CodeDocMate is able to complete the local pipeline namely ingestion chunking retrieval and explanation. The ingestion screen confirms that python sources are discovered in the repository. After chunking the querying process returns a ranked collection of code snippets , allowing a reviewer to confirm that the retrieved evidence is relevant before relying on any explanation.
 
-A noteble property of prototype is its \emph{inspection-first interaction}: evidence is presented before any generated narrative and the explanations layer restricted to summarizing only what appear in the retrieved snippets (Fig.~\ref{fig:answer_download}). This design directly addresses auditability concern associated with pure Llm answers where supporting evidence migh be absent or ambiguous \cite{Lewis2020RAG,Khan2022GPT3Doc}.
+A noteble property of prototype is its \emph{inspection-first interaction}: evidence is presented before any generated narrative and the explanations layer restricted to summarizing only what appear in the retrieved snippets. This design directly addresses auditability concern associated with pure Llm answers where supporting evidence migh be absent or ambiguous.
 
 The overview of user feedback is as follows. The pilot feedback visualizations (Fig.~\ref{fig:user_feedback_chart}) provides a concised picture of perceived usability and usefulness. The chart uses a 3 point like scale (1,=,Low, 2,=,Medium, 3,=,High). Two aspects are rated high is (score 3): \emph{Ease of Use} and \emph{Evidence Transparency}. Three aspects are rated medium is (score 2): \emph{Answer Clarity}, \emph{Retrieval Relevance}, and \emph{Overall Usefulness}.
 
@@ -499,7 +409,7 @@ Overall Usefulness & 2 & Useful for quick orientation and evidence lookup limite
 
 \end{figure}
 
-The highest signal in the feedback is the strong score for evidence transparency. This aligns with the system design every answer is accompanied by retrieved code allowing developers to verify claims directly. In contrast part the medium score for retrieval relevance is consistency with top limitation of lexical retrieval in code synonym intent can be expressed using different identifiers and relevant logic may be distributed across files or require non local control data flow reasoning \cite{Allamanis2018}. A common next step is hybrid retrieval combining lexical ranking with embedding similarity to improve semantic recall \cite{Parvez2021,Lu2022ReACC}.
+The highest signal in the feedback is the strong score for evidence transparency. This aligns with the system design every answer is accompanied by retrieved code allowing developers to verify claims directly. In contrast part the medium score for retrieval relevance is consistency with top limitation of lexical retrieval in code synonym intent can be expressed using different identifiers and relevant logic may be distributed across files or require non local control data flow reasoning. A common next step is hybrid retrieval combining lexical ranking with embedding similarity to improve semantic recall.
 
 The medium rating for answer clarity and overall usefulness is also technically plausible given that CodeDocMate Lite intentionally avoids an Llm generator. Template based on explanation help reduce hallucination problem.Yet they cant synthesizes multi hop reasoning across the module or infer intent beyond what is explicitly written in comments or identifiers. In practice this trades off can be desirable in privacy sensitive context where the primary goal is \emph{locating evidence quickly} rather than generating fully narrative explanations.
 
@@ -521,15 +431,20 @@ To strengt then reproducible evaluations and enable clear comparison across retr
 
 \section{Future Work}
 
-Future version of CodeDocMate will prioritize (i) \emph{hybrid retrieval} (BM25-style lexical scoring combined with embedding similarity) to improve semantic recall (ii) \emph{syntax-aware segmentation} using functions and classes or Ast derived boundarie to reduces context fragmentation and (iii) \emph{repository-level reasoning support} through multi chunk aggregation and explicit cross file linking. A rigorou evaluation plans will include a labeled question set per repository and will report retrieval metrics (Precision@k, Recall@k, MRR, nDCG) along with end to end task success rates. Finally an optional fully local Llm backend can be explored for rich explanations while preserving privacy and auditability.
+In future version of CodeDocMate we want use BM25 style lexical scoring and embedding method to find code match question better Functions, classes and AST boundaries help keep context together Some chunks from different file can combine to give fuller picture This help answer question need multi-file context We plan test with labeled question per repo and report metrics like Precision@k, Recall@k, MRR, nDCG Maybe later local LLM generate better explanation keeping code private No need send code outside system
 
-\section{Conclusion}\label{sec:conclusion}
+Other idea improve chunking maybe bigger overlap or dynamic window This reduce problem when important code split Retrieval can add weight to code pattern like function call variable used many times This help system see important part UI also can show file line used, highlight important line and cross reference between functions
 
-This paper demonstrates CodeDocMate a local first retrieval augmented assistant for python repos that emphasizes traceability and evidence inspection. The system performs Zıp based repos ingestion deterministic chunking into fixed 40 line windows and lightweight lexical retrieval with identifier aware matching. Retrieved snippet are presented as the primary artifact for validation and a constrained template based explanation is generated for summarize retrieved evidence without relying on external Llm API. The demonstrated versions returns top-$k$ evidence with $k{=}2$ and expose a clear stepwise uı for upload indexing retrieval and export.
+We plan user study with students or small team They try system on real repo, ask question, check answer correct or explanation clear Feedback use to improve template, ranking or chunking This give practical insight how system work outside lab
 
-Pilot feedback indicates that evidence transparent , ease of use are perceived as strong as aspects (both rated high) while retrieval relevance and overall usefulness are rated medium. From a systems perspectives these finding suggest that the evidenc first output design with provenance addres a significant trust barrier commonly associated by Llm only assistant. In this time the medium retrieval score underscores with familiar limitation lexical similarity doesnt always align with semantic relevance in code particularly when intent is expressed through non obvious identifiers or when the answer requires cross file reasoning.
+\section{Conclusion}
+\label{sec:conclusion}
 
-\textbf{Limitations:} The current version is intentionaly lightweight and therefore has several limit. Firstly retrieval is based on lexical overlap and fixed size chunking which can fragment context and miss semanticaly relevant code. Secondly the explanation component is template based which limit expressiveness and cant resolve multi hop question spamming multiple module. Thirds evaluation is preliminary and doesnt includes a labeled benchmark suite therefore standard ır metrics arent reported and the finds should be interpreted as indicative than conclusive.
+This paper show CodeDocMate Lite local first retrieval assistant for python repo focus on traceability and evidence check User see all step from upload, indexing, chunking, retrieval to explanation export System do zip based repo ingestion, deterministic 40 line chunking, lightweight lexical retrieval with identifier match Retrieved snippet main artifact for validation and explanation generated from retrieved code without external LLM API Version return top-$k$ evidence with $k{=}2$ and show clear stepwise UI
+
+Pilot feedback show evidence transparency and ease of use strong, retrieval relevance and usefulness medium Some problem exist because lexical similarity not always same semantic meaning Unusual variable or cross-file dependency answer may incomplete Medium retrieval score show lexical method limitation need improvement
+
+Overall CodeDocMate Lite show local retrieval first with provenance and evidence visibility increase trust compare LLM only Users can check chunk source, see explanation linked to code Reduce hallucination risk and help understand system This make tool practical for student, researcher, small team developer Local approach keep privacy, no code sent outside Pilot study show user understand output and trust more even if retrieval need improvement
 
 \section*{Acknowledgment}
 
